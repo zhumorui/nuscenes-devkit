@@ -22,7 +22,11 @@ def get_dirlist(_rootdir):
 
     with os.scandir(_rootdir) as rit:
         for entry in rit:
-            if not entry.name.startswith('.') and entry.is_dir():
+            if (
+                not entry.name.startswith('.') 
+                and entry.is_dir()
+                and entry.name != 'egg-info'
+            ):
                 dirlist.append(entry.path)
                 dirlist += get_dirlist(entry.path)
 
@@ -34,8 +38,11 @@ os.chdir('..')
 rootdir = 'python-sdk'
 packages = [d.replace('/', '.').replace('{}.'.format(rootdir), '') for d in get_dirlist(rootdir)]
 
-# Filter out Python cache folders
-packages = [p for p in packages if not p.endswith('__pycache__')]
+# Filter out Python cache and 'egg-info' folders
+packages = [
+    p for p in packages
+    if not p.endswith('__pycache__') and 'egg-info' not in p
+]
 
 setuptools.setup(
     name='nuscenes-devkit',

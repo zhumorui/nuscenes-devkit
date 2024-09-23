@@ -1,40 +1,15 @@
 # nuScenes dev-kit.
 # Code written by Oscar Beijbom and Varun Bankiti, 2019.
 
-DETECTION_NAMES = ['car', 'truck', 'bus', 'trailer', 'construction_vehicle', 'pedestrian', 'motorcycle', 'bicycle',
-                   'traffic_cone', 'barrier']
+DETECTION_NAMES = ['car']
 
-PRETTY_DETECTION_NAMES = {'car': 'Car',
-                          'truck': 'Truck',
-                          'bus': 'Bus',
-                          'trailer': 'Trailer',
-                          'construction_vehicle': 'Constr. Veh.',
-                          'pedestrian': 'Pedestrian',
-                          'motorcycle': 'Motorcycle',
-                          'bicycle': 'Bicycle',
-                          'traffic_cone': 'Traffic Cone',
-                          'barrier': 'Barrier'}
+PRETTY_DETECTION_NAMES = {'car': 'Car'}
 
-DETECTION_COLORS = {'car': 'C0',
-                    'truck': 'C1',
-                    'bus': 'C2',
-                    'trailer': 'C3',
-                    'construction_vehicle': 'C4',
-                    'pedestrian': 'C5',
-                    'motorcycle': 'C6',
-                    'bicycle': 'C7',
-                    'traffic_cone': 'C8',
-                    'barrier': 'C9'}
+DETECTION_COLORS = {'car': 'C0'}
 
-ATTRIBUTE_NAMES = ['pedestrian.moving', 'pedestrian.sitting_lying_down', 'pedestrian.standing', 'cycle.with_rider',
-                   'cycle.without_rider', 'vehicle.moving', 'vehicle.parked', 'vehicle.stopped']
+ATTRIBUTE_NAMES = ['vehicle.moving', 'vehicle.parked', 'vehicle.stopped']
 
-PRETTY_ATTRIBUTE_NAMES = {'pedestrian.moving': 'Ped. Moving',
-                          'pedestrian.sitting_lying_down': 'Ped. Sitting',
-                          'pedestrian.standing': 'Ped. Standing',
-                          'cycle.with_rider': 'Cycle w/ Rider',
-                          'cycle.without_rider': 'Cycle w/o Rider',
-                          'vehicle.moving': 'Veh. Moving',
+PRETTY_ATTRIBUTE_NAMES = {'vehicle.moving': 'Veh. Moving',
                           'vehicle.parked': 'Veh. Parked',
                           'vehicle.stopped': 'Veh. Stopped'}
 

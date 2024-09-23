@@ -19,3 +19,4 @@ doc
 .project
 .pydevproject
 _ext
+python-sdk/nuscenes_devkit.egg-info/
