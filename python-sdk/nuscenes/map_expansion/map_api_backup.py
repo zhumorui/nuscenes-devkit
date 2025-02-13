@@ -34,7 +34,7 @@ plt.style.use('seaborn-whitegrid')
 # Define a map geometry type for polygons and lines.
 Geometry = Union[Polygon, LineString]
 
-locations = ['Town01', 'Town02', 'Town03', 'Town04', 'Town05', 'Town06', 'Town07', 'Town10HD']
+locations = ['singapore-onenorth', 'singapore-hollandvillage', 'singapore-queenstown', 'boston-seaport']
 
 
 class NuScenesMap:
@@ -75,13 +75,14 @@ class NuScenesMap:
         self.geometric_layers = ['polygon', 'line', 'node']
 
         # These are the non-geometric layers which have polygons as the geometric descriptors.
-        self.non_geometric_polygon_layers = ['drivable_area']
+        self.non_geometric_polygon_layers = ['drivable_area', 'road_segment', 'road_block', 'lane', 'ped_crossing',
+                                             'walkway', 'stop_line', 'carpark_area']
 
         # We want to be able to search for lane connectors, but not render them.
-        self.lookup_polygon_layers = self.non_geometric_polygon_layers
+        self.lookup_polygon_layers = self.non_geometric_polygon_layers + ['lane_connector']
 
         # These are the non-geometric layers which have line strings as the geometric descriptors.
-        self.non_geometric_line_layers = ['road_divider', 'lane_divider']
+        self.non_geometric_line_layers = ['road_divider', 'lane_divider', 'traffic_light']
         self.non_geometric_layers = self.non_geometric_polygon_layers + self.non_geometric_line_layers
         self.layer_names = self.geometric_layers + self.lookup_polygon_layers + self.non_geometric_line_layers
 
@@ -130,20 +131,20 @@ class NuScenesMap:
         self.line = self._load_layer('line')
         self.node = self._load_layer('node')
         self.drivable_area = self._load_layer('drivable_area')
-        # self.road_segment = self._load_layer('road_segment')
-        # self.road_block = self._load_layer('road_block')
-        # self.lane = self._load_layer('lane')
-        # self.ped_crossing = self._load_layer('ped_crossing')
-        # self.walkway = self._load_layer('walkway')
-        # self.stop_line = self._load_layer('stop_line')
-        # self.carpark_area = self._load_layer('carpark_area')
+        self.road_segment = self._load_layer('road_segment')
+        self.road_block = self._load_layer('road_block')
+        self.lane = self._load_layer('lane')
+        self.ped_crossing = self._load_layer('ped_crossing')
+        self.walkway = self._load_layer('walkway')
+        self.stop_line = self._load_layer('stop_line')
+        self.carpark_area = self._load_layer('carpark_area')
         self.road_divider = self._load_layer('road_divider')
         self.lane_divider = self._load_layer('lane_divider')
-        # self.traffic_light = self._load_layer('traffic_light')
+        self.traffic_light = self._load_layer('traffic_light')
 
-        # self.arcline_path_3: Dict[str, List[dict]] = self._load_layer_dict('arcline_path_3')
-        # self.connectivity: Dict[str, dict] = self._load_layer_dict('connectivity')
-        # self.lane_connector = self._load_layer('lane_connector')
+        self.arcline_path_3: Dict[str, List[dict]] = self._load_layer_dict('arcline_path_3')
+        self.connectivity: Dict[str, dict] = self._load_layer_dict('connectivity')
+        self.lane_connector = self._load_layer('lane_connector')
 
     def _make_token2ind(self) -> None:
         """ Store the mapping from token to layer index for each layer. """
@@ -173,16 +174,16 @@ class NuScenesMap:
 
         # Makes a shortcut between stop lines to their cues, there's different cues for different types of stop line.
         # Refer to `_get_stop_line_cue()` for details.
-        # for record in self.stop_line:
-        #     cue = self._get_stop_line_cue(record)
-        #     record['cue'] = cue
+        for record in self.stop_line:
+            cue = self._get_stop_line_cue(record)
+            record['cue'] = cue
 
-        # # Makes a shortcut between lanes to their lane divider segment nodes.
-        # for record in self.lane:
-        #     record['left_lane_divider_segment_nodes'] = [self.get('node', segment['node_token']) for segment in
-        #                                                  record['left_lane_divider_segments']]
-        #     record['right_lane_divider_segment_nodes'] = [self.get('node', segment['node_token']) for segment in
-        #                                                   record['right_lane_divider_segments']]
+        # Makes a shortcut between lanes to their lane divider segment nodes.
+        for record in self.lane:
+            record['left_lane_divider_segment_nodes'] = [self.get('node', segment['node_token']) for segment in
+                                                         record['left_lane_divider_segments']]
+            record['right_lane_divider_segment_nodes'] = [self.get('node', segment['node_token']) for segment in
+                                                          record['right_lane_divider_segments']]
 
     def _get_stop_line_cue(self, stop_line_record: dict) -> List[dict]:
         """
@@ -623,7 +624,7 @@ class NuScenesMap:
         :return: Dictionary of layer_name - tokens pairs.
         """
         # Filter out irrelevant layers.
-        road_layers = ['lane']
+        road_layers = ['road_segment', 'road_block', 'lane']
         layers = self.explorer.layers_on_point(x, y)
         rel_layers = {layer: layers[layer] for layer in road_layers}
 
@@ -644,16 +645,15 @@ class NuScenesMap:
         # Go through all objects within the bounding box.
         result = {layer: [] for layer in road_layers}
         if rel_layer == 'road_segment':
-            # # For road segments, we do not have a direction.
-            # # Return objects that have ANY exterior points in common with the relevant layer.
-            # rel_exterior_nodes = self.get(rel_layer, rel_token)['exterior_node_tokens']
-            # for layer in road_layers:
-            #     for token in intersect[layer]:
-            #         exterior_nodes = self.get(layer, token)['exterior_node_tokens']
-            #         if any(n in exterior_nodes for n in rel_exterior_nodes) \
-            #                 and token != rel_layers[layer]:
-            #             result[layer].append(token)
-            pass
+            # For road segments, we do not have a direction.
+            # Return objects that have ANY exterior points in common with the relevant layer.
+            rel_exterior_nodes = self.get(rel_layer, rel_token)['exterior_node_tokens']
+            for layer in road_layers:
+                for token in intersect[layer]:
+                    exterior_nodes = self.get(layer, token)['exterior_node_tokens']
+                    if any(n in exterior_nodes for n in rel_exterior_nodes) \
+                            and token != rel_layers[layer]:
+                        result[layer].append(token)
         else:
             # For lanes and road blocks, the next road is indicated by the edge line.
             # Return objects where ALL edge line nodes are included in the exterior nodes.
@@ -836,22 +836,14 @@ class NuScenesMapExplorer:
         :return: Stacked numpy array of size [c x h x w] with c channels and the same width/height as the canvas.
         """
         # For some combination of parameters, we need to know the size of the current map.
-        if self.map_api.map_name == 'Town01':
-            map_dims = [451.0409696125742, 385.2599759893961]
-        elif self.map_api.map_name == 'Town02':
-            map_dims = [253.8006794421732, 253.7699760331369]
-        elif self.map_api.map_name == 'Town03':
-            map_dims = [643.4835660391296, 629.8440375788773],
-        if self.map_api.map_name == 'Town04':
-            map_dims = [979.9045739538731, 882.6453465832003]
-        elif self.map_api.map_name == 'Town05':
-            map_dims = [579.8768154442497, 476.7095914779274]
-        elif self.map_api.map_name == 'Town06':
-            map_dims = [1089.408638271309, 611.3787086109462]
-        elif self.map_api.map_name == 'Town07':
-            map_dims = [334.8458862439064, 417.455228770175]
-        elif self.map_api.map_name == 'Town10HD':
-            map_dims = [285.34359374875726, 270.7111933455968]
+        if self.map_api.map_name == 'singapore-onenorth':
+            map_dims = [1585.6, 2025.0]
+        elif self.map_api.map_name == 'singapore-hollandvillage':
+            map_dims = [2808.3, 2922.9]
+        elif self.map_api.map_name == 'singapore-queenstown':
+            map_dims = [3228.6, 3687.1]
+        elif self.map_api.map_name == 'boston-seaport':
+            map_dims = [2979.5, 2118.1]
         else:
             raise Exception('Error: Invalid map!')
 
@@ -1085,7 +1077,7 @@ class NuScenesMapExplorer:
 
         # Default layers.
         if layer_names is None:
-            layer_names = ['lane']
+            layer_names = ['road_segment', 'lane', 'ped_crossing', 'walkway', 'stop_line', 'carpark_area']
 
         # Check layers whether we can render them.
         for layer_name in layer_names:
@@ -1540,13 +1532,6 @@ class NuScenesMapExplorer:
         line_record = self.map_api.get('line', line_token)
         line_nodes = [(self.map_api.get('node', token)['x'], self.map_api.get('node', token)['y'])
                       for token in line_record['node_tokens']]
-        
-        #TODO: fix the issue with the line nodes being less than 2
-        # print(f"line_nodes: {line_nodes}")
-        if len(line_nodes) < 2:
-            # raise ValueError(f"Line requires at least two points, but got: {line_nodes}")
-            line_nodes = line_nodes + line_nodes
-
 
         return LineString(line_nodes)
 

@@ -168,3 +168,64 @@ def create_tracks(all_boxes: EvalBoxes, nusc: NuScenes, eval_split: str, gt: boo
             tracks[scene_token] = defaultdict(list, sorted(tracks[scene_token].items(), key=lambda kv: kv[0]))
 
     return tracks
+
+def create_union_tracks(all_boxes: EvalBoxes, nusc: NuScenes, eval_split: str, gt: bool) \
+        -> Dict[str, Dict[int, List[TrackingBox]]]:
+    """
+    Returns all tracks for all scenes with the same prefix as the current scene. 
+    Tracks are sorted in chronological order and include data from both ego and sender views.
+    :param all_boxes: Holds all GT or predicted boxes.
+    :param nusc: The NuScenes instance to load the sample information from.
+    :param eval_split: The evaluation split for which we create tracks.
+    :param gt: Whether we are creating tracks for GT or predictions.
+    :return: The union tracks.
+    """
+    # Helper function to extract the prefix of a scene.
+    def get_scene_prefix(scene_name):
+        return "_".join(scene_name.split("_")[:-2])
+
+    # Get all scenes for the evaluation split.
+    scenes_of_eval_split: List[str] = get_scenes_of_split(split_name=eval_split, nusc=nusc)
+
+    # Map prefixes to their corresponding scene tokens.
+    prefix_to_scene_tokens = defaultdict(set)
+    for scene_name in scenes_of_eval_split:
+        scene = nusc.get('scene', scene_name)
+        prefix = get_scene_prefix(scene['name'])
+        prefix_to_scene_tokens[prefix].add(scene_name)
+
+    # Tracks are stored as dict {scene_token: {timestamp: List[TrackingBox]}}.
+    tracks = defaultdict(lambda: defaultdict(list))
+
+    # Group annotations wrt scene and timestamp.
+    for sample_token in all_boxes.sample_tokens:
+        sample_record = nusc.get('sample', sample_token)
+        scene_token = sample_record['scene_token']
+        scene_name = nusc.get('scene', scene_token)['name']
+        prefix = get_scene_prefix(scene_name)
+
+        # Union all scenes with the same prefix.
+        related_scene_tokens = prefix_to_scene_tokens[prefix]
+        for related_scene_token in related_scene_tokens:
+            sample_record = nusc.get('sample', sample_token)
+            tracks[related_scene_token][sample_record['timestamp']] = all_boxes.boxes[sample_token]
+
+    # Replace box scores with track score (average box score) if not GT.
+    if not gt:
+        for scene_id, scene_tracks in tracks.items():
+            track_id_scores = defaultdict(list)
+            for timestamp, boxes in scene_tracks.items():
+                for box in boxes:
+                    track_id_scores[box.tracking_id].append(box.tracking_score)
+            track_id_avg_scores = {tracking_id: np.mean(scores) for tracking_id, scores in track_id_scores.items()}
+            for timestamp, boxes in scene_tracks.items():
+                for box in boxes:
+                    box.tracking_score = track_id_avg_scores[box.tracking_id]
+
+    # Interpolate and ensure chronological order.
+    for scene_token in tracks.keys():
+        tracks[scene_token] = interpolate_tracks(tracks[scene_token])
+        if not gt:
+            tracks[scene_token] = defaultdict(list, sorted(tracks[scene_token].items(), key=lambda kv: kv[0]))
+
+    return tracks

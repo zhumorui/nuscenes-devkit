@@ -24,7 +24,7 @@ from nuscenes.eval.tracking.algo import TrackingEvaluation
 from nuscenes.eval.tracking.constants import AVG_METRIC_MAP, MOT_METRIC_MAP, LEGACY_METRICS
 from nuscenes.eval.tracking.data_classes import TrackingMetrics, TrackingMetricDataList, TrackingConfig, TrackingBox, \
     TrackingMetricData
-from nuscenes.eval.tracking.loaders import create_tracks
+from nuscenes.eval.tracking.loaders import create_tracks, create_union_tracks
 from nuscenes.eval.tracking.render import recall_metric_curve, summary_plot
 from nuscenes.eval.tracking.utils import print_final_metrics
 from nuscenes.utils.splits import is_predefined_split
