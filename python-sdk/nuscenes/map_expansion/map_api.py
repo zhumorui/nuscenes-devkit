@@ -1555,14 +1555,9 @@ class NuScenesMapExplorer:
         Get the bounds of the geometric object that corresponds to a non geometric record.
         :param layer_name: Name of the layer that we are interested in.
         :param token: Token of the record.
-        :return: min_x, min_y, max_x, max_y of the line representation.
+        :return: min_x, min_y, max_x, max_y of of the line representation.
         """
-        if layer_name in self.map_api.non_geometric_polygon_layers:
-            return self._get_polygon_bounds(layer_name, token)
-        elif layer_name in self.map_api.non_geometric_line_layers:
-            return self._get_line_bounds(layer_name, token)
-        else:
-            raise ValueError("{} is not a valid layer".format(layer_name))
+        return self.explorer.get_bounds(layer_name, token)
 
     def _get_polygon_bounds(self, layer_name: str, token: str) -> Tuple[float, float, float, float]:
         """
@@ -1835,8 +1830,12 @@ class NuScenesMapExplorer:
         def int_coords(x):
             # function to round and convert to int
             return np.array(x).round().astype(np.int32)
-        exteriors = [int_coords(poly.exterior.coords) for poly in polygons]
-        interiors = [int_coords(pi.coords) for poly in polygons for pi in poly.interiors]
+            
+        if not isinstance(polygons, MultiPolygon):
+            polygons = MultiPolygon([polygons])
+            
+        exteriors = [int_coords(poly.exterior.coords) for poly in polygons.geoms]
+        interiors = [int_coords(pi.coords) for poly in polygons.geoms for pi in poly.interiors]
         cv2.fillPoly(mask, exteriors, 1)
         cv2.fillPoly(mask, interiors, 0)
         return mask
@@ -1850,7 +1849,7 @@ class NuScenesMapExplorer:
         :return: Numpy ndarray line mask.
         """
         if lines.geom_type == 'MultiLineString':
-            for line in lines:
+            for line in lines.geoms:
                 coords = np.asarray(list(line.coords), np.int32)
                 coords = coords.reshape((-1, 2))
                 cv2.polylines(mask, [coords], False, 1, 2)
